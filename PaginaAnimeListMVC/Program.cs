@@ -16,7 +16,6 @@ builder.Services.AddControllersWithViews();
 
 //agregar HttpClient a los servicios
 builder.Services.AddHttpClient();
-builder.Services.AddSingleton<IConfiguration>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
