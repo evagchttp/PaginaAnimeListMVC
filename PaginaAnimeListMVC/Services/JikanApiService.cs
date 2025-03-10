@@ -18,6 +18,39 @@ namespace PaginaAnimeListMVC.Services
             _httpClient = _httpClientFactory.CreateClient();
 
         }
+        public async Task<Show> GetShowById(int id){
+            Show show = new Show();
+            string? baseUrl = _config["JikanAnime:BaseUrl"];
+            if (!string.IsNullOrEmpty(baseUrl))
+            {
+                var responseMessage = await _httpClient.GetAsync(baseUrl + "/anime/" + id);
+                if (responseMessage.IsSuccessStatusCode)
+                {
+                    var jsonString = await responseMessage.Content.ReadAsStringAsync();
+                    var jsonData = JsonSerializer.Deserialize<JikanResponseSingle>(jsonString, new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+                        PropertyNameCaseInsensitive = true
+                    });
+                    if (jsonData != null)
+                    {
+                        show = new Show
+                        {
+                            Id = jsonData.Data.MalId,
+                            Title = jsonData.Data.Title,
+                            Description = jsonData.Data.Synopsis ?? "No description available.",
+                            Image = jsonData.Data.Images?.Jpg?.LargeImageUrl ?? string.Empty,
+                            Genre = jsonData.Data.Genres?.FirstOrDefault()?.Name ?? "Unknown",
+                            Studio = jsonData.Data.Studios?.FirstOrDefault()?.Name ?? "Unknown",
+                            ReleaseDate = DateTime.TryParse(jsonData.Data.Aired?.From, out var date) ? date : DateTime.MinValue,
+                            Rating = (int)(jsonData.Data.Score ?? 0)
+                        };
+                        return show;
+                    }
+                }
+            }
+            return show;
+        }
         public async Task<List<Show>> GetTopShows()
         {
             List<Show> shows = new List<Show>();
@@ -30,7 +63,7 @@ namespace PaginaAnimeListMVC.Services
                 if (responseMessage.IsSuccessStatusCode)
                 {
                     var jsonString = await responseMessage.Content.ReadAsStringAsync();
-                    var jsonData = JsonSerializer.Deserialize<JikanResponse>(jsonString, new JsonSerializerOptions
+                    var jsonData = JsonSerializer.Deserialize<JikanResponseTop>(jsonString, new JsonSerializerOptions
                     {
                         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
                         PropertyNameCaseInsensitive = true
@@ -58,9 +91,13 @@ namespace PaginaAnimeListMVC.Services
             return shows;
         }
 
-        public class JikanResponse
+        public class JikanResponseTop
         {
             public List<JikanAnime> Data { get; set; }
+        }
+        public class JikanResponseSingle
+        {
+            public JikanAnime Data { get; set; }
         }
 
         public class JikanAnime

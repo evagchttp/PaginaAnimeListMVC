@@ -1,0 +1,337 @@
+﻿@model Show
+
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <!-- Show poster/image -->
+        <div class="col-md-4">
+            <img src="@Model.Image" alt="@Model.Title" class="img-fluid rounded shadow" />
+            
+            <div class="d-flex justify-content-between mt-3">
+                <!-- Like button -->
+                <button id="likeButton" class="btn btn-outline-danger" onclick="likeShow(@Model.Id)">
+                    <i class="bi bi-heart"></i> <span id="likeText">Like</span>
+                </button>
+                
+                <!-- Add to Watchlist button -->
+                <button id="watchlistButton" class="btn btn-outline-primary" onclick="addToWatchlist(@Model.Id)">
+                    <i class="bi bi-bookmark-plus"></i> <span id="watchlistText">Add to Watchlist</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Show details -->
+        <div class="col-md-8">
+            <h1 class="mb-3">@Model.Title</h1>
+            
+            <div class="mb-3">
+                <span class="badge bg-primary me-2">@Model.Genre</span>
+                <span class="text-muted">@Model.ReleaseDate.ToString("MMMM yyyy")</span>
+                <div class="mt-2">
+                    @for (int i = 1; i <= 5; i++)
+                    {
+                        if (i <= Model.Rating)
+                        {
+                            <i class="bi bi-star-fill text-warning"></i>
+                        }
+                        else
+                        {
+                            <i class="bi bi-star text-warning"></i>
+                        }
+                    }
+                    <span class="ms-2">@Model.Rating/5</span>
+                </div>
+            </div>
+            
+            <h5>Studio</h5>
+            <p>@Model.Studio</p>
+            
+            <h5>Synopsis</h5>
+            <p class="lead">@Model.Description</p>
+            
+            <div class="mt-4">
+                <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">Edit</a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Related Shows Carousel -->
+    <div class="mt-5">
+        <h3>More Shows in @Model.Genre</h3>
+        <div id="relatedShowsCarousel" class="carousel slide" data-bs-ride="carousel">
+            <div class="carousel-inner" id="relatedShowsContainer">
+                <!-- Carousel items will be loaded dynamically -->
+                <div class="carousel-item active">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="card">
+                                <div class="card-img-top placeholder-glow" style="height: 200px; background-color: #e9ecef;"></div>
+                                <div class="card-body">
+                                    <h5 class="card-title placeholder-glow">
+                                        <span class="placeholder col-6"></span>
+                                    </h5>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Placeholder items -->
+                        <div class="col-md-3">
+                            <div class="card">
+                                <div class="card-img-top placeholder-glow" style="height: 200px; background-color: #e9ecef;"></div>
+                                <div class="card-body">
+                                    <h5 class="card-title placeholder-glow">
+                                        <span class="placeholder col-6"></span>
+                                    </h5>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card">
+                                <div class="card-img-top placeholder-glow" style="height: 200px; background-color: #e9ecef;"></div>
+                                <div class="card-body">
+                                    <h5 class="card-title placeholder-glow">
+                                        <span class="placeholder col-6"></span>
+                                    </h5>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card">
+                                <div class="card-img-top placeholder-glow" style="height: 200px; background-color: #e9ecef;"></div>
+                                <div class="card-body">
+                                    <h5 class="card-title placeholder-glow">
+                                        <span class="placeholder col-6"></span>
+                                    </h5>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#relatedShowsCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#relatedShowsCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Next</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        /* Custom animations */
+        @@keyframes heartBeat {
+            0% { transform: scale(1); }
+            14% { transform: scale(1.3); }
+            28% { transform: scale(1); }
+            42% { transform: scale(1.3); }
+            70% { transform: scale(1); }
+        }
+        
+        .heart-beat {
+            animation: heartBeat 1s;
+        }
+        
+        /* Custom hover effects */
+        .card {
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+    </style>
+
+    <script>
+        // Like functionality
+        function likeShow(showId) {
+            const likeButton = document.getElementById('likeButton');
+            const likeText = document.getElementById('likeText');
+            const icon = likeButton.querySelector('i');
+            
+            // Toggle like state
+            if (likeButton.classList.contains('btn-outline-danger')) {
+                // Like the show
+                fetch(`/api/Shows/Like/${showId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        likeButton.classList.remove('btn-outline-danger');
+                        likeButton.classList.add('btn-danger');
+                        icon.classList.remove('bi-heart');
+                        icon.classList.add('bi-heart-fill', 'heart-beat');
+                        likeText.textContent = 'Liked';
+                        
+                        // Remove animation class after animation completes
+                        setTimeout(() => {
+                            icon.classList.remove('heart-beat');
+                        }, 1000);
+                    }
+                })
+                .catch(error => console.error('Error liking show:', error));
+            } else {
+                // Unlike the show
+                fetch(`/api/Shows/Unlike/${showId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        likeButton.classList.remove('btn-danger');
+                        likeButton.classList.add('btn-outline-danger');
+                        icon.classList.remove('bi-heart-fill');
+                        icon.classList.add('bi-heart');
+                        likeText.textContent = 'Like';
+                    }
+                })
+                .catch(error => console.error('Error unliking show:', error));
+            }
+        }
+        
+        // Watchlist functionality
+        function addToWatchlist(showId) {
+            const watchlistButton = document.getElementById('watchlistButton');
+            const watchlistText = document.getElementById('watchlistText');
+            const icon = watchlistButton.querySelector('i');
+            
+            // Toggle watchlist state
+            if (watchlistButton.classList.contains('btn-outline-primary')) {
+                // Add to watchlist
+                fetch(`/api/Shows/AddToWatchlist/${showId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        watchlistButton.classList.remove('btn-outline-primary');
+                        watchlistButton.classList.add('btn-primary');
+                        icon.classList.remove('bi-bookmark-plus');
+                        icon.classList.add('bi-bookmark-check-fill');
+                        watchlistText.textContent = 'In Watchlist';
+                    }
+                })
+                .catch(error => console.error('Error adding to watchlist:', error));
+            } else {
+                // Remove from watchlist
+                fetch(`/api/Shows/RemoveFromWatchlist/${showId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        watchlistButton.classList.remove('btn-primary');
+                        watchlistButton.classList.add('btn-outline-primary');
+                        icon.classList.remove('bi-bookmark-check-fill');
+                        icon.classList.add('bi-bookmark-plus');
+                        watchlistText.textContent = 'Add to Watchlist';
+                    }
+                })
+                .catch(error => console.error('Error removing from watchlist:', error));
+            }
+        }
+        
+        // Load related shows based on genre
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRelatedShows('@Model.Genre', @Model.Id);
+            
+            // Check if show is already liked or in watchlist
+            checkLikeStatus(@Model.Id);
+            checkWatchlistStatus(@Model.Id);
+        });
+        
+        function loadRelatedShows(genre, currentShowId) {
+            fetch(`/api/Shows/Related?genre=${genre}&excludeId=${currentShowId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('relatedShowsContainer');
+                    container.innerHTML = '';
+                    
+                    // Process data in groups of 4 for the carousel
+                    for (let i = 0; i < data.length; i += 4) {
+                        const isActive = i === 0 ? 'active' : '';
+                        const carouselItem = document.createElement('div');
+                        carouselItem.className = `carousel-item ${isActive}`;
+                        
+                        const row = document.createElement('div');
+                        row.className = 'row';
+                        
+                        // Add up to 4 shows per carousel item
+                        for (let j = i; j < i + 4 && j < data.length; j++) {
+                            const show = data[j];
+                            const col = document.createElement('div');
+                            col.className = 'col-md-3';
+                            col.innerHTML = `
+                                <div class="card h-100">
+                                    <img src="${show.image}" class="card-img-top" alt="${show.title}" style="height: 200px; object-fit: cover;">
+                                    <div class="card-body">
+                                        <h5 class="card-title">${show.title}</h5>
+                                        <p class="card-text">${show.rating}/5 ⭐</p>
+                                        <a href="/Shows/Details/${show.id}" class="btn btn-sm btn-outline-secondary">View</a>
+                                    </div>
+                                </div>
+                            `;
+                            row.appendChild(col);
+                        }
+                        
+                        carouselItem.appendChild(row);
+                        container.appendChild(carouselItem);
+                    }
+                })
+                .catch(error => console.error('Error loading related shows:', error));
+        }
+        
+        function checkLikeStatus(showId) {
+            fetch(`/api/Shows/IsLiked/${showId}`)
+                .then(response => response.json())
+                .then(isLiked => {
+                    const likeButton = document.getElementById('likeButton');
+                    const likeText = document.getElementById('likeText');
+                    const icon = likeButton.querySelector('i');
+                    
+                    if (isLiked) {
+                        likeButton.classList.remove('btn-outline-danger');
+                        likeButton.classList.add('btn-danger');
+                        icon.classList.remove('bi-heart');
+                        icon.classList.add('bi-heart-fill');
+                        likeText.textContent = 'Liked';
+                    }
+                })
+                .catch(error => console.error('Error checking like status:', error));
+        }
+        
+        function checkWatchlistStatus(showId) {
+            fetch(`/api/Shows/IsInWatchlist/${showId}`)
+                .then(response => response.json())
+                .then(isInWatchlist => {
+                    const watchlistButton = document.getElementById('watchlistButton');
+                    const watchlistText = document.getElementById('watchlistText');
+                    const icon = watchlistButton.querySelector('i');
+                    
+                    if (isInWatchlist) {
+                        watchlistButton.classList.remove('btn-outline-primary');
+                        watchlistButton.classList.add('btn-primary');
+                        icon.classList.remove('bi-bookmark-plus');
+                        icon.classList.add('bi-bookmark-check-fill');
+                        watchlistText.textContent = 'In Watchlist';
+                    }
+                })
+                .catch(error => console.error('Error checking watchlist status:', error));
+        }
+    </script>

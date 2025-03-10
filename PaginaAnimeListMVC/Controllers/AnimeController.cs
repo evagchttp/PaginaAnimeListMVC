@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
 using PaginaAnimeListMVC.Models;
 using PaginaAnimeListMVC.Services;
 namespace PaginaAnimeListMVC.Controllers
@@ -24,21 +25,10 @@ namespace PaginaAnimeListMVC.Controllers
             //Enviar los objetos a la vista
             return View(shows);
         }
-        public IActionResult Detalles(int id)
+        public async Task<IActionResult> Detalle(int id)
         {
             //Pedir informacion acerca del show con Id = id;
-
-            // crear un Show()
-            var show = new Show()
-            {
-                Title = "One Piece",
-                Description = "Monkey D. Luffy y su tripulación de piratas buscan el One Piece, el tesoro más grande del mundo.",
-                Image = "https://m.media-amazon.com/images/I/81zQxy5mi8L._AC_SY679_.jpg",
-                Genre = "Aventura, Acción, Fantasía",
-                Studio = "Toei Animation",
-                ReleaseDate = new DateTime(1999, 10, 20),
-                Rating = 9
-            };
+            var show = await _jikanApiService.GetShowById(id);
             return View(show);
         }
     }
