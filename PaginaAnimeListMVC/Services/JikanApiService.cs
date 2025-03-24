@@ -63,7 +63,7 @@ namespace PaginaAnimeListMVC.Services
                 if (responseMessage.IsSuccessStatusCode)
                 {
                     var jsonString = await responseMessage.Content.ReadAsStringAsync();
-                    var jsonData = JsonSerializer.Deserialize<JikanResponseTop>(jsonString, new JsonSerializerOptions
+                    var jsonData = JsonSerializer.Deserialize<JikanResponse>(jsonString, new JsonSerializerOptions
                     {
                         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
                         PropertyNameCaseInsensitive = true
@@ -71,7 +71,6 @@ namespace PaginaAnimeListMVC.Services
 
                     if (jsonData?.Data != null)
                     {
-                        Console.WriteLine("JsonDataImageUrl:" + jsonData.Data[0].Images.Jpg.LargeImageUrl);
                         shows = jsonData.Data.Select(item => new Show
                         {
                             Id = item.MalId,
@@ -83,23 +82,107 @@ namespace PaginaAnimeListMVC.Services
                             ReleaseDate = DateTime.TryParse(item.Aired?.From, out var date) ? date : DateTime.MinValue,
                             Rating = (int)(item.Score ?? 0)
                         }).ToList();
-                        Console.WriteLine("imageUrl:" + shows[0].Image);
                     }
                 }
             }
 
             return shows;
         }
-
-        public class JikanResponseTop
+        public async Task<List<Show>> GetShowsBySearch(
+            string query,
+            int page = 1,
+            int limit = 10,
+            string type = "tv",
+            bool sfw = true,
+            List<string> genres = null
+            ){
+            List<Show> shows = new List<Show>();
+            string? baseUrl = _config["JikanAnime:BaseUrl"];
+            if (!string.IsNullOrEmpty(baseUrl)){
+                var queryParams = new Dictionary<string, string>
+                {
+                    {"q", query},
+                    {"page", page.ToString()},
+                    {"limit", limit.ToString()},
+                    {"type", type},
+                    {"sfw", sfw.ToString().ToLower()},
+                    {"genres", genres != null ? string.Join(",", genres) : string.Empty}
+                };
+                var queryString = new FormUrlEncodedContent(queryParams);
+                var responseMessage = await _httpClient.GetAsync(baseUrl + "/search/anime?" + await queryString.ReadAsStringAsync());
+                if (responseMessage.IsSuccessStatusCode){
+                    var jsonString = await responseMessage.Content.ReadAsStringAsync();
+                    var jsonData = JsonSerializer.Deserialize<JikanResponse>(jsonString, new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+                        PropertyNameCaseInsensitive = true
+                    });
+                    if (jsonData?.Data != null){
+                        shows = jsonData.Data.Select(item => new Show
+                        {
+                            Id = item.MalId,
+                            Title = item.Title,
+                            Description = item.Synopsis ?? "No description available.",
+                            Image = item.Images?.Jpg?.LargeImageUrl ?? string.Empty,
+                            Genre = item.Genres?.FirstOrDefault()?.Name ?? "Unknown",
+                            Studio = item.Studios?.FirstOrDefault()?.Name ?? "Unknown",
+                            ReleaseDate = DateTime.TryParse(item.Aired?.From, out var date) ? date : DateTime.MinValue,
+                            Rating = (int)(item.Score ?? 0)
+                        }).ToList();
+                    }
+                }
+            }
+            return shows;
+        }
+        public async Task<List<Show>> GetRelatedShows(int id, int limit = 12){
+            List<Show> shows = new List<Show>();
+            string? baseUrl = _config["JikanAnime:BaseUrl"];
+            if (!string.IsNullOrEmpty(baseUrl)){
+                var responseMessage = await _httpClient.GetAsync(baseUrl + "/anime/" + id + "/recommendations");
+                if (responseMessage.IsSuccessStatusCode){
+                    var jsonString = await responseMessage.Content.ReadAsStringAsync();
+                    var jsonData = JsonSerializer.Deserialize<JikanResponseRecommendations>(jsonString, new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+                        PropertyNameCaseInsensitive = true
+                    });
+                    if (jsonData?.Data != null){
+                        shows = jsonData.Data.Select(item => new Show
+                        {
+                            Id = item.Entry.MalId,
+                            Title = item.Entry.Title,
+                            Image = item.Entry.Images?.Jpg?.LargeImageUrl ?? string.Empty,
+                        }).ToList().Take(limit).ToList();
+                    }
+                }
+            }
+            return shows;
+        }
+        public class JikanResponse
         {
             public List<JikanAnime> Data { get; set; }
+        }
+        public class JikanResponseRecommendations
+        {
+            public List<RecommendationItem> Data { get; set; }
+        }
+
+        public class RecommendationItem
+        {
+            public Entry Entry { get; set; }
+        }
+
+        public class Entry 
+        {
+            public int MalId { get; set; }
+            public string Title { get; set; }
+            public JikanImages Images { get; set; }
         }
         public class JikanResponseSingle
         {
             public JikanAnime Data { get; set; }
         }
-
+       
         public class JikanAnime
         {
             public int MalId { get; set; }

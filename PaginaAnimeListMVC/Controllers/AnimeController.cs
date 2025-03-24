@@ -6,13 +6,9 @@ namespace PaginaAnimeListMVC.Controllers
 {
     public class AnimeController : Controller
     {
-        private readonly IHttpClientFactory _httpClientFactory;
-        private readonly IConfiguration _config;
         private readonly JikanApiService _jikanApiService;
         public AnimeController(IHttpClientFactory httpClientFactory, IConfiguration config)
         {
-            _httpClientFactory = httpClientFactory;
-            _config = config;
             _jikanApiService = new JikanApiService(httpClientFactory, config);
         }
         public async Task<IActionResult> Index()
@@ -30,6 +26,13 @@ namespace PaginaAnimeListMVC.Controllers
             //Pedir informacion acerca del show con Id = id;
             var show = await _jikanApiService.GetShowById(id);
             return View(show);
+        }
+        public async Task<IActionResult> Related(int id){
+            var shows = await _jikanApiService.GetRelatedShows(id);
+            if (shows.Count() > 0){
+                return Json(shows);
+            }
+            return Json(new List<Show>());
         }
     }
 }

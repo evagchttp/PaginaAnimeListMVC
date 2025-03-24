@@ -257,7 +257,7 @@
         });
         
         function loadRelatedShows(genre, currentShowId) {
-            fetch(`/api/Shows/Related?genre=${genre}&excludeId=${currentShowId}`)
+            fetch(`/Anime/Related?id=${currentShowId}`)
                 .then(response => response.json())
                 .then(data => {
                     const container = document.getElementById('relatedShowsContainer');
@@ -275,6 +275,7 @@
                         // Add up to 4 shows per carousel item
                         for (let j = i; j < i + 4 && j < data.length; j++) {
                             const show = data[j];
+                            console.log(show);
                             const col = document.createElement('div');
                             col.className = 'col-md-3';
                             col.innerHTML = `
@@ -283,7 +284,7 @@
                                     <div class="card-body">
                                         <h5 class="card-title">${show.title}</h5>
                                         <p class="card-text">${show.rating}/5 ⭐</p>
-                                        <a href="/Shows/Details/${show.id}" class="btn btn-sm btn-outline-secondary">View</a>
+                                        <a href="/Anime/Detalle/${show.id}" class="btn btn-sm btn-outline-secondary">View</a>
                                     </div>
                                 </div>
                             `;
