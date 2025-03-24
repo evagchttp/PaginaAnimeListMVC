@@ -1,7 +1,7 @@
 using PaginaAnimeListMVC.Services.Interfaces;
 using PaginaAnimeListMVC.Models;
 using System.Text.Json;
-using System.ComponentModel.DataAnnotations;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace PaginaAnimeListMVC.Services
 {
@@ -10,15 +10,26 @@ namespace PaginaAnimeListMVC.Services
         private readonly IHttpClientFactory _httpClientFactory;
         private HttpClient _httpClient;
         private readonly IConfiguration _config;
-        public JikanApiService(IHttpClientFactory httpClientFactory, IConfiguration config)
+        private readonly IMemoryCache _cache;
+        private readonly TimeSpan _defaultCacheDuration = TimeSpan.FromHours(1); // Default cache of 1 hour
+
+        public JikanApiService(IHttpClientFactory httpClientFactory, IConfiguration config, IMemoryCache cache)
         {
             _httpClientFactory = httpClientFactory;
             _config = config;
-
+            _cache = cache;
             _httpClient = _httpClientFactory.CreateClient();
-
         }
         public async Task<Show> GetShowById(int id){
+            string cacheKey = $"Show_{id}";
+            
+            // Try to get from cache first
+            if (_cache.TryGetValue(cacheKey, out Show cachedShow))
+            {
+                return cachedShow;
+            }
+            
+            // If not in cache, get from API
             Show show = new Show();
             string? baseUrl = _config["JikanAnime:BaseUrl"];
             if (!string.IsNullOrEmpty(baseUrl))
@@ -45,6 +56,10 @@ namespace PaginaAnimeListMVC.Services
                             ReleaseDate = DateTime.TryParse(jsonData.Data.Aired?.From, out var date) ? date : DateTime.MinValue,
                             Rating = (int)(jsonData.Data.Score ?? 0)
                         };
+                        
+                        // Cache the result
+                        _cache.Set(cacheKey, show, _defaultCacheDuration);
+                        
                         return show;
                     }
                 }
@@ -53,6 +68,14 @@ namespace PaginaAnimeListMVC.Services
         }
         public async Task<List<Show>> GetShowsByIds(IEnumerable<int> ids)
         {
+            string cacheKey = $"Shows_{string.Join("_", ids)}";
+            
+            // Try to get from cache first
+            if (_cache.TryGetValue(cacheKey, out List<Show> cachedShows))
+            {
+                return cachedShows;
+            }
+
             List<Show> shows = new List<Show>();
 
             foreach (var id in ids)
@@ -63,11 +86,22 @@ namespace PaginaAnimeListMVC.Services
                     shows.Add(show);
                 }
             }
+            
+            // Cache the result
+            _cache.Set(cacheKey, shows, _defaultCacheDuration);
 
             return shows;
         }
         public async Task<List<Show>> GetTopShows()
         {
+            string cacheKey = "TopShows";
+            
+            // Try to get from cache first
+            if (_cache.TryGetValue(cacheKey, out List<Show> cachedShows))
+            {
+                return cachedShows;
+            }
+            
             List<Show> shows = new List<Show>();
             string? baseUrl = _config["JikanAnime:BaseUrl"];
 
@@ -97,6 +131,9 @@ namespace PaginaAnimeListMVC.Services
                             ReleaseDate = DateTime.TryParse(item.Aired?.From, out var date) ? date : DateTime.MinValue,
                             Rating = (int)(item.Score ?? 0)
                         }).ToList();
+                        
+                        // Cache the result
+                        _cache.Set(cacheKey, shows, _defaultCacheDuration);
                     }
                 }
             }
@@ -111,6 +148,14 @@ namespace PaginaAnimeListMVC.Services
             bool sfw = true,
             List<string> genres = null
             ){
+            string cacheKey = $"Search_{query}_{page}_{limit}_{type}_{sfw}_{(genres != null ? string.Join("_", genres) : "noGenres")}";
+            
+            // Try to get from cache first
+            if (_cache.TryGetValue(cacheKey, out List<Show> cachedShows))
+            {
+                return cachedShows;
+            }
+            
             List<Show> shows = new List<Show>();
             string? baseUrl = _config["JikanAnime:BaseUrl"];
             if (!string.IsNullOrEmpty(baseUrl)){
@@ -144,12 +189,23 @@ namespace PaginaAnimeListMVC.Services
                             ReleaseDate = DateTime.TryParse(item.Aired?.From, out var date) ? date : DateTime.MinValue,
                             Rating = (int)(item.Score ?? 0)
                         }).ToList();
+                        
+                        // Cache the result with a shorter duration for search results
+                        _cache.Set(cacheKey, shows, TimeSpan.FromMinutes(30));
                     }
                 }
             }
             return shows;
         }
         public async Task<List<Show>> GetRelatedShows(int id, int limit = 12){
+            string cacheKey = $"RelatedShows_{id}_{limit}";
+            
+            // Try to get from cache first
+            if (_cache.TryGetValue(cacheKey, out List<Show> cachedShows))
+            {
+                return cachedShows;
+            }
+            
             List<Show> shows = new List<Show>();
             string? baseUrl = _config["JikanAnime:BaseUrl"];
             if (!string.IsNullOrEmpty(baseUrl)){
@@ -168,6 +224,9 @@ namespace PaginaAnimeListMVC.Services
                             Title = item.Entry.Title,
                             Image = item.Entry.Images?.Jpg?.LargeImageUrl ?? string.Empty,
                         }).ToList().Take(limit).ToList();
+                        
+                        // Cache the result
+                        _cache.Set(cacheKey, shows, _defaultCacheDuration);
                     }
                 }
             }

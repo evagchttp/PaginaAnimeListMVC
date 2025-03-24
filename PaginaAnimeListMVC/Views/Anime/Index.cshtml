@@ -401,22 +401,10 @@
     // Función de búsqueda
     function searchShows() {
         const searchInput = document.getElementById('searchInput').value.toLowerCase();
-        const showCards = document.querySelectorAll('.show-card');
-        let visibleCount = 0;
-
-        showCards.forEach(function(card) {
-            const title = card.getAttribute('data-title').toLowerCase();
-            const genre = card.getAttribute('data-genre').toLowerCase();
-
-            if (title.includes(searchInput) || genre.includes(searchInput)) {
-                card.style.display = 'block';
-                visibleCount++;
-            } else {
-                card.style.display = 'none';
-            }
-        });
-
-        // Mostrar mensaje si no hay resultados
-        document.getElementById('noResults').style.display = visibleCount === 0 ? 'block' : 'none';
+        fetch(`/Anime/Search?query=${searchInput}`)
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+            });
     }
 </script>

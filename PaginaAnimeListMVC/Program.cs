@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using PaginaAnimeListMVC.Data;
 using PaginaAnimeListMVC.Models;
+using PaginaAnimeListMVC.Services;
+using PaginaAnimeListMVC.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,8 +21,12 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.R
 
 builder.Services.AddControllersWithViews();
 
+// Add memory caching
+builder.Services.AddMemoryCache();
+
 // Agregar HttpClient a los servicios
 builder.Services.AddHttpClient();
+builder.Services.AddScoped<IJikanApiService, JikanApiService>();
 
 var app = builder.Build();
 

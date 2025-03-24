@@ -3,15 +3,16 @@ using PaginaAnimeListMVC.Models;
 using PaginaAnimeListMVC.Services;
 using Microsoft.EntityFrameworkCore;
 using PaginaAnimeListMVC.Data;
+using PaginaAnimeListMVC.Services.Interfaces;
 namespace PaginaAnimeListMVC.Controllers
 {
     public class AnimeController : Controller
     {
-        private readonly JikanApiService _jikanApiService;
+        private readonly IJikanApiService _jikanApiService;
         private readonly ApplicationDbContext _context;
-        public AnimeController(IHttpClientFactory httpClientFactory, IConfiguration config, ApplicationDbContext context)
+        public AnimeController(IJikanApiService jikanApiService, ApplicationDbContext context)
         {
-            _jikanApiService = new JikanApiService(httpClientFactory, config);
+            _jikanApiService = jikanApiService;
             _context = context;
         }
         [Route("/")]
@@ -194,19 +195,6 @@ namespace PaginaAnimeListMVC.Controllers
             }
             await _context.SaveChangesAsync();
             return Json(new { success = true });
-        }
-        public async Task<IActionResult> GetWatchlist(){
-            var userName = HttpContext.User?.Identity?.Name;
-            if (userName == null){
-                return Unauthorized();
-            }
-            var user = await _context.ApplicationUsers.FirstOrDefaultAsync(u => u.UserName == userName);
-            if (user == null){
-                return Unauthorized();
-            }
-            var watchlist = await _context.ShowWatchlists.Where(sw => sw.ApplicationUserId == user.Id).ToListAsync();
-            var shows = await _jikanApiService.GetShowsByIds(watchlist.Select(sw => sw.ShowId));
-            return Json(shows);
         }
         
         // API endpoint for checking if a show is liked by the current user
