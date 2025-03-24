@@ -61,7 +61,7 @@
     
     <!-- Related Shows Carousel -->
     <div class="mt-5">
-        <h3>More Shows in @Model.Genre</h3>
+        <h3>More Shows Like This</h3>
         <div id="relatedShowsCarousel" class="carousel slide" data-bs-ride="carousel">
             <div class="carousel-inner" id="relatedShowsContainer">
                 <!-- Carousel items will be loaded dynamically -->
@@ -124,6 +124,9 @@
 </div>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.11.1/dist/sweetalert2.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.11.1/dist/sweetalert2.min.js"></script>
+
     <style>
         /* Custom animations */
         @@keyframes heartBeat {
@@ -147,6 +150,57 @@
             transform: translateY(-5px);
             box-shadow: 0 10px 20px rgba(0,0,0,0.1);
         }
+
+        /* Floating hearts animation */
+        @@keyframes floatUpAndFade {
+            0% {
+                transform: translateY(0) scale(0.7);
+                opacity: 0.7;
+            }
+            100% {
+                transform: translateY(-80px) scale(1.3);
+                opacity: 0;
+            }
+        }
+
+        @@keyframes floatUpAndFadeRight {
+            0% {
+                transform: translateY(0) translateX(0) scale(0.7);
+                opacity: 0.7;
+            }
+            100% {
+                transform: translateY(-80px) translateX(20px) scale(1.3);
+                opacity: 0;
+            }
+        }
+
+        @@keyframes floatUpAndFadeLeft {
+            0% {
+                transform: translateY(0) translateX(0) scale(0.7);
+                opacity: 0.7;
+            }
+            100% {
+                transform: translateY(-80px) translateX(-20px) scale(1.3);
+                opacity: 0;
+            }
+        }
+
+        .floating-heart {
+            position: fixed;
+            color: #ff4d6d;
+            font-size: 20px;
+            pointer-events: none;
+            z-index: 1000;
+            animation: floatUpAndFade 1.5s ease-out forwards;
+        }
+
+        .floating-heart-left {
+            animation: floatUpAndFadeLeft 1.5s ease-out forwards;
+        }
+
+        .floating-heart-right {
+            animation: floatUpAndFadeRight 1.5s ease-out forwards;
+        }
     </style>
 
     <script>
@@ -158,8 +212,14 @@
             
             // Toggle like state
             if (likeButton.classList.contains('btn-outline-danger')) {
+                // Create floating hearts animation
+                createFloatingHearts(likeButton);
+                // Remove animation class after animation completes
+                setTimeout(() => {
+                    icon.classList.remove('heart-beat');
+                }, 1000);
                 // Like the show
-                fetch(`/api/Shows/Like/${showId}`, {
+                fetch(`/Anime/Like/${showId}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -173,16 +233,34 @@
                         icon.classList.add('bi-heart-fill', 'heart-beat');
                         likeText.textContent = 'Liked';
                         
-                        // Remove animation class after animation completes
-                        setTimeout(() => {
-                            icon.classList.remove('heart-beat');
-                        }, 1000);
+                    }
+                    if (response.status == 401){
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Login To Your Account',
+                            text: 'You must be logged in to like a show',
+                            confirmButtonText: 'OK'
+                        }).then(() => {
+                            window.location.href = '/Identity/Account/Login';
+                        });
+                    }
+                    if (response.status == 404){
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Show Not Found',
+                            text: 'The show you are trying to like does not exist',
+                            confirmButtonText: 'OK'
+                        });
                     }
                 })
-                .catch(error => console.error('Error liking show:', error));
+                .catch(error => {
+                    console.error('Error liking show:', error);
+                    likeButton.classList.add('btn-outline-danger');
+                    likeText.textContent = 'Like';
+                });
             } else {
                 // Unlike the show
-                fetch(`/api/Shows/Unlike/${showId}`, {
+                fetch(`/Anime/Unlike/${showId}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -197,7 +275,62 @@
                         likeText.textContent = 'Like';
                     }
                 })
-                .catch(error => console.error('Error unliking show:', error));
+                .catch(error => {
+                    console.error('Error unliking show:', error);
+                    likeButton.classList.add('btn-outline-danger');
+                    likeText.textContent = 'Like';
+                });
+            }
+        }
+        
+        // Function to create floating hearts
+        function createFloatingHearts(button) {
+            // Create 5-8 hearts with random positions
+            const numHearts = Math.floor(Math.random() * 4) + 5;
+            const buttonRect = button.getBoundingClientRect();
+            
+            // Get the button position relative to the viewport
+            const buttonCenterX = buttonRect.left + buttonRect.width / 2;
+            const buttonTopY = buttonRect.top;
+            
+            // Heart colors
+            const heartColors = ['#ff4d6d', '#ff758f', '#ff8fa3', '#e83a5f', '#d62828'];
+            
+            for (let i = 0; i < numHearts; i++) {
+                const heart = document.createElement('i');
+                heart.classList.add('bi', 'bi-heart-fill', 'floating-heart');
+                
+                // Add direction variation
+                const direction = Math.floor(Math.random() * 3);
+                if (direction === 1) {
+                    heart.classList.add('floating-heart-left');
+                } else if (direction === 2) {
+                    heart.classList.add('floating-heart-right');
+                }
+                
+                // Randomize starting position
+                const startX = buttonCenterX + (Math.random() * 40 - 20);
+                const startY = buttonTopY;
+                
+                // Set random size, rotation, delay, and color
+                const size = 16 + Math.random() * 8;
+                const rotation = Math.random() * 30 - 15;
+                const delay = Math.random() * 0.5;
+                const color = heartColors[Math.floor(Math.random() * heartColors.length)];
+                
+                heart.style.left = `${startX}px`;
+                heart.style.top = `${startY}px`;
+                heart.style.fontSize = `${size}px`;
+                heart.style.transform = `rotate(${rotation}deg)`;
+                heart.style.animationDelay = `${delay}s`;
+                heart.style.color = color;
+                
+                document.body.appendChild(heart);
+                
+                // Remove heart element when animation ends
+                setTimeout(() => {
+                    heart.remove();
+                }, 1500 + (delay * 1000));
             }
         }
         
@@ -210,7 +343,7 @@
             // Toggle watchlist state
             if (watchlistButton.classList.contains('btn-outline-primary')) {
                 // Add to watchlist
-                fetch(`/api/Shows/AddToWatchlist/${showId}`, {
+                fetch(`/Anime/AddToWatchlist/${showId}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -225,10 +358,14 @@
                         watchlistText.textContent = 'In Watchlist';
                     }
                 })
-                .catch(error => console.error('Error adding to watchlist:', error));
+                .catch(error => {
+                    console.error('Error adding to watchlist:', error);
+                    watchlistButton.classList.add('btn-outline-primary');
+                    watchText.textContent = 'Add to Watchlist';
+                });
             } else {
                 // Remove from watchlist
-                fetch(`/api/Shows/RemoveFromWatchlist/${showId}`, {
+                fetch(`/Anime/RemoveFromWatchlist/${showId}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -243,7 +380,11 @@
                         watchlistText.textContent = 'Add to Watchlist';
                     }
                 })
-                .catch(error => console.error('Error removing from watchlist:', error));
+                .catch(error => {
+                    console.error('Error removing from watchlist:', error);
+                    watchlistButton.classList.add('btn-outline-primary');
+                    watchText.textContent = 'Add to Watchlist';
+                });
             }
         }
         
@@ -252,8 +393,7 @@
             loadRelatedShows('@Model.Genre', @Model.Id);
             
             // Check if show is already liked or in watchlist
-            checkLikeStatus(@Model.Id);
-            checkWatchlistStatus(@Model.Id);
+            checkInitialStatus();
         });
         
         function loadRelatedShows(genre, currentShowId) {
@@ -275,7 +415,6 @@
                         // Add up to 4 shows per carousel item
                         for (let j = i; j < i + 4 && j < data.length; j++) {
                             const show = data[j];
-                            console.log(show);
                             const col = document.createElement('div');
                             col.className = 'col-md-3';
                             col.innerHTML = `
@@ -295,44 +434,40 @@
                         container.appendChild(carouselItem);
                     }
                 })
-                .catch(error => console.error('Error loading related shows:', error));
+                .catch(error => {
+                    console.error('Error loading related shows:', error);
+                });
         }
         
-        function checkLikeStatus(showId) {
-            fetch(`/api/Shows/IsLiked/${showId}`)
-                .then(response => response.json())
-                .then(isLiked => {
-                    const likeButton = document.getElementById('likeButton');
-                    const likeText = document.getElementById('likeText');
-                    const icon = likeButton.querySelector('i');
-                    
-                    if (isLiked) {
-                        likeButton.classList.remove('btn-outline-danger');
-                        likeButton.classList.add('btn-danger');
-                        icon.classList.remove('bi-heart');
-                        icon.classList.add('bi-heart-fill');
-                        likeText.textContent = 'Liked';
-                    }
-                })
-                .catch(error => console.error('Error checking like status:', error));
-        }
-        
-        function checkWatchlistStatus(showId) {
-            fetch(`/api/Shows/IsInWatchlist/${showId}`)
-                .then(response => response.json())
-                .then(isInWatchlist => {
-                    const watchlistButton = document.getElementById('watchlistButton');
-                    const watchlistText = document.getElementById('watchlistText');
-                    const icon = watchlistButton.querySelector('i');
-                    
-                    if (isInWatchlist) {
-                        watchlistButton.classList.remove('btn-outline-primary');
-                        watchlistButton.classList.add('btn-primary');
-                        icon.classList.remove('bi-bookmark-plus');
-                        icon.classList.add('bi-bookmark-check-fill');
-                        watchlistText.textContent = 'In Watchlist';
-                    }
-                })
-                .catch(error => console.error('Error checking watchlist status:', error));
+        function checkInitialStatus() {
+            // Use ViewBag values instead of making API calls
+            const isLiked = @(ViewBag.IsLiked != null && ViewBag.IsLiked ? "true" : "false");
+            const isInWatchlist = @(ViewBag.IsInWatchlist != null && ViewBag.IsInWatchlist ? "true" : "false");
+            
+            // Update UI for like status
+            const likeButton = document.getElementById('likeButton');
+            const likeText = document.getElementById('likeText');
+            const likeIcon = likeButton.querySelector('i');
+            
+            if (isLiked) {
+                likeButton.classList.remove('btn-outline-danger');
+                likeButton.classList.add('btn-danger');
+                likeIcon.classList.remove('bi-heart');
+                likeIcon.classList.add('bi-heart-fill');
+                likeText.textContent = 'Liked';
+            }
+            
+            // Update UI for watchlist status
+            const watchlistButton = document.getElementById('watchlistButton');
+            const watchlistText = document.getElementById('watchlistText');
+            const watchlistIcon = watchlistButton.querySelector('i');
+            
+            if (isInWatchlist) {
+                watchlistButton.classList.remove('btn-outline-primary');
+                watchlistButton.classList.add('btn-primary');
+                watchlistIcon.classList.remove('bi-bookmark-plus');
+                watchlistIcon.classList.add('bi-bookmark-check-fill');
+                watchlistText.textContent = 'In Watchlist';
+            }
         }
     </script>

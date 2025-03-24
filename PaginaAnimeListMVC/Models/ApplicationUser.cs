@@ -1,9 +1,10 @@
 using Microsoft.AspNetCore.Identity;
 using PaginaAnimeListMVC.Models;
 
-public class ApplicationUser : IdentityUser
-{
-    public ICollection<Show> LikedShows { get; set; } = new List<Show>();
-    public ICollection<Show> WatchingShows { get; set; } = new List<Show>();
-    public ICollection<Show> WatchlistShows { get; set; } = new List<Show>();
+namespace PaginaAnimeListMVC.Models{
+    public class ApplicationUser : IdentityUser
+    {
+        public ICollection<ShowLike> ShowLikes { get; set; } = new List<ShowLike>();
+        public ICollection<ShowWatchlist> ShowWatchlists { get; set; } = new List<ShowWatchlist>();
+    }
 }

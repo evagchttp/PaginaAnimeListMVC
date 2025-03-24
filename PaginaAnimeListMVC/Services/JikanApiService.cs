@@ -51,6 +51,21 @@ namespace PaginaAnimeListMVC.Services
             }
             return show;
         }
+        public async Task<List<Show>> GetShowsByIds(IEnumerable<int> ids)
+        {
+            List<Show> shows = new List<Show>();
+
+            foreach (var id in ids)
+            {
+                var show = await GetShowById(id);
+                if (show != null)
+                {
+                    shows.Add(show);
+                }
+            }
+
+            return shows;
+        }
         public async Task<List<Show>> GetTopShows()
         {
             List<Show> shows = new List<Show>();
